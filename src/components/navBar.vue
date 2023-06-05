@@ -24,6 +24,7 @@ mounted() {
             <font-awesome-icon class="fa-check-to-slot" icon="fa-solid fa-check-to-slot" />
             <h1 class="title">Qnaire</h1>
         </div>
+        <h5 class="signIn">Sign in</h5>
     </nav>
 </template>
 
@@ -32,10 +33,12 @@ mounted() {
     nav{
         position: relative;
         width: 100vw;
-        height: 10vh;
+        height: 10%;
+        background-color: $page;
         .logo{
             cursor: pointer;
             position: relative;
+            width: max-content;
             .fa-check-to-slot{
                 margin-top: 1vh;
                 margin-left: 1vw;
@@ -50,6 +53,13 @@ mounted() {
                 color: $navFooter;
                 font-family: "adobe heiti std";
             }
+        }
+        .signIn{
+            cursor: pointer;
+            position: absolute;
+            right: 3%;
+            top: 50%;
+            transform: translateY(-50%);
         }
 
     }

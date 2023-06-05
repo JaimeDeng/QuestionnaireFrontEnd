@@ -1,8 +1,6 @@
 <script>
-import navBar from "../components/navBar.vue";
 export default (await import('vue')).defineComponent({
 components: {
-  navBar
 },
 data() {
   return{
@@ -21,11 +19,6 @@ data() {
     ]
   }
 },
-computed: {
-  rows() {
-    return this.items.length
-  }
-},
 methods: {
 
 },
@@ -37,7 +30,6 @@ mounted() {
 
 <template>
   <main>
-    <navBar />
 
     <!--搜尋欄-->
     <div class="searchFrame">
@@ -65,7 +57,7 @@ mounted() {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="{item , index} in items" :key="index">
+          <tr v-for="(item , index) in items" :key="index">
             <th scope="row">{{ item.Qid }}</th>
             <td>{{ item.title }}</td>
             <td>{{ item.status }}</td>
@@ -104,7 +96,7 @@ mounted() {
 @import '../assets/color';
   main{
     position: relative;
-    height: 100vh;
+    height: 90%;
     background-color: $page;
 
     .searchFrame{
