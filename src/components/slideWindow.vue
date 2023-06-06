@@ -46,7 +46,7 @@ mounted() {
         width: 20vw;
         background-color: white;
         z-index: 1;
-        box-shadow: 0px 0px 30px 30px rgba(104, 104, 104, 0.3);
+        box-shadow: 0px 0px 50px 10px rgba(104, 104, 104, 0.3);
         .title{
             margin-top: 20%;
             margin-left: 10%;
