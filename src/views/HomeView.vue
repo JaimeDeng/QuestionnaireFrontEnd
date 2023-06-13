@@ -9,14 +9,35 @@ data() {
     pageIndex: [],
     currentPage: 1,
     questionnaires: [],
+    offsetTable: [],
     keyword: '',
     startTime: '',
     endTime: '',
     notRenderOver: true,
+    pageNotRenderOver: true,
     noInfo: false
   }
 },
 methods: {
+  setEmptyTable(num){
+    this.offsetTable = [];
+    if(num !== 5 || num % 10 !== 5){
+      let offset = 0;
+      if(num > 9){
+        num = num % 10;
+      }
+      if(num < 5){
+        offset = Math.abs(num - 5);
+      }
+      if(num > 5){
+        offset = 5 - (num - 5);
+      }
+      while(offset > 0){
+        this.offsetTable.push(offset);
+        offset--;
+      }
+    }
+  },
   formatTime(questionnaires){
     questionnaires.forEach((questionnaire) => {
       var startTime = new Date(questionnaire.startTime);
@@ -49,31 +70,18 @@ methods: {
     .then((data)=>{
       console.log(data.dataNum);
       this.questionnaireDataNum = data.dataNum;
-      this.renderPagenation();
-    })
-    .catch(err => console.log(err))
-  },
-  getDataNumByKeyword(keyword){
-    fetch(`http://localhost:3000/getQuestionnaireNumByKeyword/${keyword}` ,{
-        method:"get",
-        headers: {
-            'Content-Type': 'application/json; charset=utf-8'
-        }
-    }).then(res => res.json())
-    .then((data)=>{
-      console.log(data.dataNum);
-      this.questionnaireDataNum = data.dataNum;
-      this.renderPagenation();
       if(data.dataNum !== 0){
-        this.initKeywordPage(keyword);
+        this.noInfo = false;
       }else{
         this.noInfo = true;
       }
+      this.setEmptyTable(data.dataNum);
+      this.renderPagenation();
     })
     .catch(err => console.log(err))
   },
-  getDataNumInTimeFrame(startTime , endTime){
-    fetch(`http://localhost:3000/getQuestionnaireNumInTimeFrame/${startTime}/${endTime}` ,{
+  getDataNumInCriteria(keyword, startTime , endTime){
+    fetch(`http://localhost:3000/getQuestionnaireNumInCriteria/${keyword}/${startTime}/${endTime}` ,{
         method:"get",
         headers: {
             'Content-Type': 'application/json; charset=utf-8'
@@ -82,9 +90,11 @@ methods: {
     .then((data)=>{
       console.log(data.dataNum);
       this.questionnaireDataNum = data.dataNum;
+      this.setEmptyTable(data.dataNum);
       this.renderPagenation();
       if(data.dataNum !== 0){
-        this.initTimeFramePage(startTime , endTime);
+        this.noInfo = false;
+        this.initCriteriaPage(keyword , startTime , endTime);
       }else{
         this.noInfo = true;
       }
@@ -113,11 +123,12 @@ methods: {
       this.setStatus();
       console.log(data.questionnaires);
       this.notRenderOver = false;
+      this.pageNotRenderOver = false;
     })
     .catch(err => console.log(err))
   },
-  initKeywordPage(keyword){
-    fetch(`http://localhost:3000/getQuestionnaireByKeywordAsPage/${keyword}/1` ,{
+  initCriteriaPage(keyword , startTime , endTime){
+    fetch(`http://localhost:3000/getQuestionnairesInCriteria/${keyword}/${startTime}/${endTime}/1` ,{
         method:"get",
         headers: {
             'Content-Type': 'application/json; charset=utf-8'
@@ -127,21 +138,7 @@ methods: {
       this.formatTime(data.questionnaires);
       this.questionnaires = data.questionnaires;
       this.setStatus();
-      console.log(data.questionnaires);
-    })
-    .catch(err => console.log(err))
-  },
-  initTimeFramePage(startTime , endTime){
-    fetch(`http://localhost:3000/getQuestionnairesInTimeFrame/${startTime}/${endTime}/1` ,{
-        method:"get",
-        headers: {
-            'Content-Type': 'application/json; charset=utf-8'
-        }
-    }).then(res => res.json())
-    .then((data)=>{
-      this.formatTime(data.questionnaires);
-      this.questionnaires = data.questionnaires;
-      this.setStatus();
+      this.pageNotRenderOver = false;
       console.log(data.questionnaires);
     })
     .catch(err => console.log(err))
@@ -166,6 +163,7 @@ methods: {
   changePage(index){
     if(this.keyword === '' && this.startTime === '' && this.endTime === ''){
       if(index > 0 && index <= this.pageNum){
+        this.pageNotRenderOver = true;
         this.currentPage = index;
         fetch(`http://localhost:3000/getQuestionnairesByPage/${this.currentPage}` ,{
               method:"get",
@@ -178,12 +176,14 @@ methods: {
             this.questionnaires = data.questionnaires;
             this.setStatus();
             console.log(data.questionnaires);
+            this.pageNotRenderOver = false;
           })
           .catch(err => console.log(err))
       }
     }
     if(this.keyword !== '' && this.startTime === '' && this.endTime === ''){
       if(index > 0 && index <= this.pageNum){
+        this.pageNotRenderOver = true;
         this.currentPage = index;
         fetch(`http://localhost:3000/getQuestionnaireByKeywordAsPage/${this.keyword}/${this.currentPage}` ,{
               method:"get",
@@ -196,12 +196,14 @@ methods: {
             this.questionnaires = data.questionnaires;
             this.setStatus();
             console.log(data.questionnaires);
+            this.pageNotRenderOver = false;
           })
           .catch(err => console.log(err))
       }
     }
     if(this.keyword === '' && this.startTime !== '' || this.endTime !== ''){
       if(index > 0 && index <= this.pageNum){
+        this.pageNotRenderOver = true;
         this.currentPage = index;
         let startTime = this.startTime;
         let endTime = this.endTime;
@@ -222,6 +224,7 @@ methods: {
             this.questionnaires = data.questionnaires;
             this.setStatus();
             console.log(data.questionnaires);
+            this.pageNotRenderOver = false;
           })
           .catch(err => console.log(err))
       }
@@ -236,36 +239,96 @@ watch:{
   //關鍵字欄位
   keyword(newKeyword){
     console.log(newKeyword);
-    if(newKeyword === ''){
+    if(this.startTime === '' && this.endTime === '' && newKeyword === ''){
       this.noInfo = false;
       this.getDataNum();
       this.initPage();
-    }else{
-      this.getDataNumByKeyword(newKeyword);
-    } 
+    }else if(this.startTime === '' && this.endTime === ''){
+      this.getDataNumInCriteria(newKeyword , null , null);
+    }else if(this.startTime !== '' && this.endTime === ''){
+      this.getDataNumInCriteria(newKeyword , this.startTime , null);
+    }else if(this.startTime === '' && this.endTime !== ''){
+      this.getDataNumInCriteria(newKeyword , null , this.endTime);
+    }else if(this.startTime !== '' && this.endTime !== ''){
+      this.getDataNumInCriteria(newKeyword , this.startTime , this.endTime);
+    }
   },
   //開始時間欄位
   startTime(newTime){
-    if(newTime === ''){
+    if(newTime === '' && this.endTime === '' && this.keyword === ''){
+      //若結束時間與關鍵字是空的時 , 清空開始時間
       this.noInfo = false;
+      this.currentPage = 1;
       this.getDataNum();
       this.initPage();
-    }else if(this.endTime === ''){
-      this.getDataNumInTimeFrame(newTime , null);
-    }else if(this.endTime !== ''){
-      this.getDataNumInTimeFrame(newTime , this.endTime);
+    }else if(this.endTime === '' && this.keyword === ''){
+      //若結束時間與關鍵字是無值 , 輸入開始時間
+      this.getDataNumInCriteria(null , newTime , null);
+    }else if(this.endTime !== '' && this.keyword === ''){
+      //若結束時間是有值 , 輸入開始時間
+      let startTime = new Date(newTime);
+      let endTime = new Date(this.endTime);
+      if(startTime > endTime){
+        window.alert("開始時間不得在結束時間之後")
+        this.startTime = '';
+        this.endTime = '';
+      }else{
+        this.getDataNumInCriteria(null , newTime , this.endTime);
+      }
+    }else if(this.endTime === '' && this.keyword !== ''){
+      //若關鍵字有值結束時間為空 , 輸入結束時間
+      this.getDataNumInCriteria(this.keyword , newTime , null);
+    }else if(this.endTime !== '' && this.keyword !== ''){
+      //若結束時間與關鍵字是有值 , 輸入開始時間
+      let startTime = new Date(newTime);
+      let endTime = new Date(this.endTime);
+      if(startTime > endTime){
+        window.alert("開始時間不得在結束時間之後")
+        this.keyword = '';
+        this.startTime = '';
+        this.endTime = '';
+      }else{
+        this.getDataNumInCriteria(this.keyword , newTime , this.endTime);
+      }
     }
   },
   //結束時間欄位
   endTime(newTime){
-    if(newTime === ''){
+    if(this.startTime === '' && newTime === '' && this.keyword === ''){
+      //若開始時間與關鍵字是空的時 , 清空結束時間
       this.noInfo = false;
+      this.currentPage = 1;
       this.getDataNum();
       this.initPage();
-    }else if(this.startTime === ''){
-      this.getDataNumInTimeFrame(null , newTime);
-    }else if(this.startTime !== ''){
-      this.getDataNumInTimeFrame(this.startTime , newTime);
+    }else if(this.startTime === '' && this.keyword === ''){
+      //若開始時間與關鍵字是無值 , 輸入結束時間
+      this.getDataNumInCriteria(null , null , newTime);
+    }else if(this.startTime !== '' && this.keyword === ''){
+      //若開始時間有值 , 輸入結束時間
+      let startTime = new Date(this.startTime);
+      let endTime = new Date(newTime);
+      if(startTime > endTime){
+        window.alert("結束時間不得在結束時間之前")
+        this.startTime = '';
+        this.endTime = '';
+      }else{
+        this.getDataNumInCriteria(null , this.startTime , newTime);
+      }
+    }else if(this.startTime === '' && this.keyword !== ''){
+      //若關鍵字有值開始時間為空 , 輸入結束時間
+      this.getDataNumInCriteria(this.keyword , null , newTime);
+    }else if(this.startTime !== '' && this.keyword !== ''){
+      //若開始時間與關鍵字是有值 , 輸入結束時間
+      let startTime = new Date(this.startTime);
+      let endTime = new Date(newTime);
+      if(startTime > endTime){
+        window.alert("開始時間不得在結束時間之後")
+        this.keyword = '';
+        this.startTime = '';
+        this.endTime = '';
+      }else{
+        this.getDataNumInCriteria(this.keyword , newTime , this.endTime);
+      }
     }
   }
 },
@@ -301,7 +364,8 @@ mounted() {
       <h1>問卷一覽 <font-awesome-icon class="fa-check-to-slot" icon="fa-solid fa-check-to-slot" /></h1>
       <h1 class="noInfoText" v-if="noInfo">無此條件的問卷存在</h1>
       <table v-if="!noInfo" class="table table-striped table-hover">
-        <thead>
+        <div v-if="this.pageNotRenderOver === true" class="spinner-grow text-secondary pageNotRenderOverSpinner" role="status"></div>
+        <thead v-if="this.pageNotRenderOver === false">
           <tr>
             <th scope="col">#</th>
             <th scope="col">問卷主題</th>
@@ -311,17 +375,25 @@ mounted() {
             <th scope="col">觀看統計</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody v-if="this.pageNotRenderOver === false">
           <tr v-for="(questionnaire , index) in questionnaires" :key="index">
-            <th scope="row">{{ questionnaire.questionnaireId }}</th>
+            <th class="Qid" scope="row">{{ questionnaire.questionnaireId }}</th>
             <td v-if="questionnaire.status === '進行中'" @click="checkOut(questionnaire.questionnaireId)" class="fw-bold questionnaireTitle">{{ questionnaire.title }}</td>
-            <td v-else style="color:rgb(179, 179, 179)">{{ questionnaire.title }}</td>
-            <td :style="{color : questionnaire.status === '進行中' ? '#20b52f' : questionnaire.status === '尚未開始' ? 'gray' : questionnaire.status === '已結束' ? '#284c8a' : '' ,
+            <td v-else style="color:rgb(179, 179, 179)" class="questionnaireTitle">{{ questionnaire.title }}</td>
+            <td class="status" :style="{color : questionnaire.status === '進行中' ? '#20b52f' : questionnaire.status === '尚未開始' ? 'gray' : questionnaire.status === '已結束' ? '#284c8a' : '' ,
             fontWeight :'bold'}">{{ questionnaire.status }}</td>
             <td>{{ questionnaire.startTime }}</td>
             <td>{{ questionnaire.endTime }}</td>
-            <td v-if="questionnaire.status === '進行中' || questionnaire.status === '已結束'"><a href="#">統計</a></td>
+            <td v-if="questionnaire.status === '進行中' || questionnaire.status === '已結束'"><a class="text-decoration-none" href="#">統計結果</a></td>
             <td v-else></td>
+          </tr>
+          <tr v-if="this.currentPage === this.pageNum" v-for="(offset , index) in offsetTable" :key="index">
+            <th class="Qid" scope="row"></th>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
           </tr>
         </tbody>
       </table>
@@ -436,6 +508,14 @@ mounted() {
         margin-right: auto;
         width: 90%;
         height: 30vh;
+        .pageNotRenderOverSpinner{
+          margin: 0;
+          position: absolute;
+          top: 50%;
+          transform: translateY(-50%);
+          left: 49%;
+          transform: translateX(-50%);
+        }
 
         .questionnaireTitle{
           &:hover{
@@ -443,25 +523,44 @@ mounted() {
           }
         }
 
-        td{
-          cursor: pointer;
-        }
-
         tbody , thead{
           font-size: 1.5vh;
-          height: 100%;
+
+          td{
+            cursor: pointer;
+            height: 5.5vh;
+            vertical-align: middle;
+          }
+          th{
+            cursor: pointer;
+            height: 2.5vh;
+            vertical-align: middle;
+          }
+          .questionnaireTitle{
+            width: 30vw;
+          }
+          .status{
+            width: 10vw;
+          }
+          .Qid{
+            cursor: pointer;
+            height: 5.5vh;
+            vertical-align: middle;
+          }
         }
       }
       .page{
+        position: absolute;
         width: max-content;
-        margin-left: 50%;
-        margin-top: 1%;
+        left: 50%;
+        bottom: 12%;
         transform: translateX(-50%);
       }
       .navigation{
+        position: absolute;
         width: max-content;
-        margin-left: 50%;
-        margin-top: 1%;
+        left: 50%;
+        bottom: 0.5%;
         transform: translateX(-50%);
 
         .page-link{
